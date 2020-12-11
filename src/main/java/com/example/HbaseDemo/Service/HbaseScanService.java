@@ -1,10 +1,12 @@
 package com.example.HbaseDemo.Service;
 
-import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Map;
 
 
 public interface HbaseScanService {
-    String oldHbaseScan(String rowkey);
+    List<Map<String,String>> oldHbaseScan(String rowkey);
 
     String newHbaseScan(String rowkey);
 }
