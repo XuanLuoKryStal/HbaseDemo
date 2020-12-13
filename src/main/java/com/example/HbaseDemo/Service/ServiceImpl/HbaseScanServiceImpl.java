@@ -1,5 +1,6 @@
 package com.example.HbaseDemo.Service.ServiceImpl;
 
+import com.example.HbaseDemo.Configuration.HbaseConnection;
 import com.example.HbaseDemo.Service.HbaseScanService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -20,6 +21,8 @@ import java.util.Map;
 public class HbaseScanServiceImpl implements HbaseScanService {
     @Autowired
     private Configuration configuration;
+    @Autowired
+    private HbaseConnection hbaseConnection;
 
     private final static String TABLE_NAME="T_EDI_DECLARATION";
 
@@ -27,11 +30,11 @@ public class HbaseScanServiceImpl implements HbaseScanService {
     public List<Map<String,String>> oldHbaseScan(String rowkey) {
         //1.创建连接
         HTable table = null;
-        ResultScanner scanner = null;
         Scan scan = null;
         Connection connection=null;
         try{
            connection= ConnectionFactory.createConnection(configuration);
+           System.out.println("Thread=="+Thread.currentThread().getName()+"==="+connection);
            table=(HTable)connection.getTable(TableName.valueOf(TABLE_NAME));
            scan=new Scan();
             //2.前缀表达式获取文件
@@ -40,21 +43,7 @@ public class HbaseScanServiceImpl implements HbaseScanService {
             filterList.addFilter(prefixFilter);
             scan.setFilter(filterList);
             //3.scan获取查询结果并返回
-            scanner=table.getScanner(scan);
-            List<Map<String,String>> data=new ArrayList<>();
-            int count=10;
-            for(Result result:scanner){
-                if(count>0) {
-                    Map<String, String> tmp = new HashMap<>();
-                    tmp.put("rowkey", Bytes.toString(result.getRow()));
-                    tmp.put("data", result.toString());
-                    data.add(tmp);
-                    count--;
-                }else{
-                    break;
-                }
-            }
-            return data;
+            return this.getResult(table,scan);
         }catch (IOException e){
             e.printStackTrace();
         }finally {
@@ -69,11 +58,45 @@ public class HbaseScanServiceImpl implements HbaseScanService {
       return new ArrayList<>();
     }
 
+    private List<Map<String, String>> getResult(HTable table, Scan scan) throws IOException {
+        ResultScanner scanner = null;
+        scanner=table.getScanner(scan);
+        List<Map<String,String>> data=new ArrayList<>();
+        int count=10;
+        for(Result result:scanner){
+            if(count>0) {
+                Map<String, String> tmp = new HashMap<>();
+                tmp.put("rowkey", Bytes.toString(result.getRow()));
+                tmp.put("data", result.toString());
+                data.add(tmp);
+                count--;
+            }else{
+                break;
+            }
+        }
+        return data;
+    }
+
     @Override
-    public String newHbaseScan(String rowkey) {
+    public List<Map<String,String>> newHbaseScan(String rowkey) {
         //1.单例获取连接
+        Connection connection=hbaseConnection.getInstance();
+        System.out.println("Thread=="+Thread.currentThread().getName()+"==="+connection);
         //2.范围查询
-        //3.scan缓存查询结果
-        return null;
+        HTable table = null;
+        Scan scan = null;
+        try{
+            table=(HTable)connection.getTable(TableName.valueOf(TABLE_NAME));
+            scan=new Scan();
+            String startRow=rowkey+"00";
+            String stopRow=rowkey+"xx";
+            //3.scan缓存查询结果
+            scan.setStartRow(Bytes.toBytes(startRow));
+            scan.setStopRow(Bytes.toBytes(stopRow));
+            return this.getResult(table,scan);
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
     }
 }
