@@ -24,7 +24,7 @@ public class HbaseScanServiceImpl implements HbaseScanService {
     @Autowired
     private HbaseConnection hbaseConnection;
 
-    private final static String TABLE_NAME="T_EDI_DECLARATION";
+    private final static String TABLE_NAME="T_EDI_GOODS";
 
     @Override
     public List<Map<String,String>> oldHbaseScan(String rowkey) {
@@ -33,7 +33,10 @@ public class HbaseScanServiceImpl implements HbaseScanService {
         Scan scan = null;
         Connection connection=null;
         try{
+            Long start = System.currentTimeMillis();
            connection= ConnectionFactory.createConnection(configuration);
+            Long end = System.currentTimeMillis();
+            System.out.println("old search "+(end-start)+"ms");
            System.out.println("Thread=="+Thread.currentThread().getName()+"==="+connection);
            table=(HTable)connection.getTable(TableName.valueOf(TABLE_NAME));
            scan=new Scan();
@@ -59,6 +62,8 @@ public class HbaseScanServiceImpl implements HbaseScanService {
     }
 
     private List<Map<String, String>> getResult(HTable table, Scan scan) throws IOException {
+        scan.addColumn(Bytes.toBytes("E"),
+                Bytes.toBytes("GN"));
         ResultScanner scanner = null;
         scanner=table.getScanner(scan);
         List<Map<String,String>> data=new ArrayList<>();
@@ -74,12 +79,18 @@ public class HbaseScanServiceImpl implements HbaseScanService {
                 break;
             }
         }
+        try {
+            Thread.sleep(10);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         return data;
     }
 
     @Override
     public List<Map<String,String>> newHbaseScan(String rowkey) {
         //1.单例获取连接
+        Long start = System.currentTimeMillis();
         Connection connection=hbaseConnection.getInstance();
         System.out.println("Thread=="+Thread.currentThread().getName()+"==="+connection);
         //2.范围查询
@@ -87,7 +98,12 @@ public class HbaseScanServiceImpl implements HbaseScanService {
         Scan scan = null;
         try{
             table=(HTable)connection.getTable(TableName.valueOf(TABLE_NAME));
+            Long end = System.currentTimeMillis();
+            System.out.println("new search "+(end-start)+"ms");
             scan=new Scan();
+            scan.setBatch(100);
+            scan.setCaching(100);
+            scan.setMaxResultSize(100);
             String startRow=rowkey+"00";
             String stopRow=rowkey+"xx";
             //3.scan缓存查询结果

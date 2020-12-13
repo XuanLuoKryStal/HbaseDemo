@@ -19,8 +19,8 @@ public class HbaseScanUI {
     @Autowired
     HbaseScanService service;
 
-    //01170504201100x500001630xxxxx76227
-    private static String ROWKEY="01170504201100x500001630xxxxx762";
+    //01160610211100x500000960xxxxx8247804
+    private static String ROWKEY="01160610211100x500000960xxxxx82478";
 
     @GetMapping("/old")
     public List<Map<String,String>> oldHbaseScan(){

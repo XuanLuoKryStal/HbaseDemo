@@ -16,11 +16,15 @@ public class HbaseConnection {
 
     private volatile Connection instance;
 
-    public synchronized Connection getInstance() {
+    public  Connection getInstance() {
         if (instance == null) {
             try {
-                this.instance=ConnectionFactory.createConnection(configuration);
-                return instance;
+                synchronized (this) {
+                    if(instance==null) {
+                        this.instance = ConnectionFactory.createConnection(configuration);
+                    }
+                    return instance;
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
